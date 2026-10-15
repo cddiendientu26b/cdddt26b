@@ -1,0 +1,88 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản trị lớp học</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<div id="login" class="hidden" style="max-width:420px;margin:40px auto;padding:0 14px"><div class="card">
+<h2>🔐 Đăng nhập quản trị</h2><label for="em">Email</label><input id="em" type="email" autocomplete="username">
+<label for="pw">Mật khẩu</label><input id="pw" type="password" autocomplete="current-password"><p><button id="bin">Đăng nhập</button></p>
+<a href="index.html">← Về trang chủ</a></div></div>
+<div id="panel" class="hidden"><div class="top"><b>Quản trị lớp học</b><span><a href="index.html" style="color:#fff">Trang chủ</a> <button id="bout">Đăng xuất</button></span></div>
+<main style="margin-top:14px">
+<section class="card"><h2>Thông tin chung</h2><label for="cn">Tên lớp</label><input id="cn" maxlength="60"></section>
+<section class="card"><h2>🧹 Lịch trực nhật</h2>
+<label for="st">Ngày bắt đầu (cặp số 1 trực vào ngày này)</label><input id="st" type="date">
+<label for="rl">Quy tắc luân phiên</label><select id="rl"><option value="weekdays">Thứ Hai đến thứ Sáu</option><option value="all">Tất cả các ngày</option></select>
+<label for="sd">Danh sách học sinh (mỗi dòng một tên)</label><textarea id="sd"></textarea>
+<label>Các cặp trực (theo thứ tự luân phiên)</label><div id="pairs"></div><p><button class="g" id="addp">+ Thêm cặp</button></p>
+<p id="pv" class="muted"></p>
+<p class="muted">Nếu lịch hiển thị lệch so với thực tế (nghỉ lễ, học bù, thêm/xóa cặp), hãy chỉnh lại ngày bắt đầu hoặc thứ tự cặp.</p></section>
+<section class="card"><h2>🏫 Phòng học</h2><label for="rn">Tên phòng</label><input id="rn" maxlength="40">
+<label for="rf">Tầng</label><input id="rf" maxlength="40"><label for="rw">Dãy phòng</label><input id="rw" maxlength="40">
+<label for="rt">Ghi chú</label><textarea id="rt" maxlength="300" style="min-height:70px"></textarea></section>
+<p><button id="save" style="width:100%">💾 Lưu thông tin</button></p>
+<section class="card tkb"><h2>📅 Ảnh thời khóa biểu</h2><div id="cur" class="muted">Chưa có ảnh.</div>
+<label for="fi">Chọn ảnh mới (JPG, PNG, WebP, tối đa 5 MB)</label><input id="fi" type="file" accept="image/jpeg,image/png,image/webp">
+<div id="pvw" style="margin-top:8px"></div><p><button id="up" disabled>Tải ảnh lên và lưu</button></p></section>
+</main></div><div id="toast" class="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id);let S=null,file=null,prevUrl=null;
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast '+(err?'err':'ok');t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,6000)}
+function show(loggedIn){$('login').classList.toggle('hidden',loggedIn);$('panel').classList.toggle('hidden',!loggedIn)}
+function students(){return $('sd').value.split('\n').map(s=>s.trim()).filter(Boolean)}
+function readForm(){S.class_name=$('cn').value.trim();S.start_date=$('st').value;S.rule=$('rl').value;S.students=students();
+ S.room={name:$('rn').value.trim(),floor:$('rf').value.trim(),wing:$('rw').value.trim(),note:$('rt').value.trim()}}
+function preview(){readForm();const d=dutyFor(S,vnNow().date),p=$('pv');
+ p.textContent=d.status==='empty'?'Chưa có cặp trực nào.':d.status==='notyet'?'Lịch trực chưa bắt đầu.':(d.status==='off'?'Lần trực tiếp theo: ':'Hôm nay trực: ')+d.pair.join(' và ')+' (cặp '+(d.idx+1)+'/'+d.total+')'}
+function sel(p,k){const s=document.createElement('select'),n=S.students.slice();if(p[k]&&!n.includes(p[k]))n.push(p[k]);
+ s.append(new Option('— chọn —',''));n.forEach(x=>s.append(new Option(x,x)));s.value=p[k]||'';s.onchange=()=>{p[k]=s.value;preview()};return s}
+function b(t,f){const x=document.createElement('button');x.className='g';x.textContent=t;x.onclick=f;return x}
+function mv(i,d){const j=i+d;if(j<0||j>=S.pairs.length)return;const t=S.pairs[i];S.pairs[i]=S.pairs[j];S.pairs[j]=t;pairs()}
+function pairs(){const box=$('pairs');box.textContent='';
+ S.pairs.forEach((p,i)=>{const r=document.createElement('div');r.className='prow';const n=document.createElement('b');n.textContent='Cặp '+(i+1);
+  const a=document.createElement('div');a.className='acts';a.append(b('↑ Lên',()=>mv(i,-1)),b('↓ Xuống',()=>mv(i,1)),b('🗑 Xóa',()=>{S.pairs.splice(i,1);pairs()}));
+  r.append(n,sel(p,0),sel(p,1),a);box.append(r)});preview()}
+function fill(){$('cn').value=S.class_name||'';$('st').value=S.start_date||'';$('rl').value=S.rule;$('sd').value=(S.students||[]).join('\n');
+ const r=S.room||{};$('rn').value=r.name||'';$('rf').value=r.floor||'';$('rw').value=r.wing||'';$('rt').value=r.note||'';pairs();cur()}
+function cur(){const c=$('cur');c.textContent='';if(!S.timetable_url){c.textContent='Chưa có ảnh.';return}
+ const i=new Image();i.src=S.timetable_url;i.alt='Ảnh hiện tại';i.style.cssText='width:100%;border-radius:10px';i.onerror=()=>{c.textContent='Không tải được ảnh hiện tại.'};c.append(i)}
+async function init(){
+ if(!configOk){show(false);toast('Chưa cấu hình config.js (xem README, Bước 4).',true);return}
+ const {data}=await sb.auth.getSession();
+ if(!data.session){show(false);return}
+ try{const d=await loadSettings();S=d;S.pairs=(d.pairs||[]).map(p=>[p[0]||'',p[1]||'']);S.students=d.students||[];show(true);fill()}
+ catch(e){show(true);toast('Không tải được dữ liệu: '+(e.message||'lỗi mạng'),true)}}
+$('bin').onclick=async()=>{if(!configOk)return toast('Chưa cấu hình config.js.',true);
+ const r=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
+ if(r.error)return toast('Sai email hoặc mật khẩu.',true);$('pw').value='';init()};
+$('bout').onclick=async()=>{await sb.auth.signOut();S=null;show(false);toast('Đã đăng xuất.')};
+['cn','st','rl'].forEach(i=>$(i).oninput=preview);
+$('sd').oninput=()=>{readForm();pairs()};
+$('addp').onclick=()=>{readForm();S.pairs.push(['','']);pairs()};
+function validate(){readForm();if(!S.class_name)return'Hãy nhập tên lớp.';if(!S.start_date)return'Hãy chọn ngày bắt đầu.';
+ if(new Set(S.students).size!==S.students.length)return'Danh sách học sinh có tên trùng nhau.';
+ for(let i=0;i<S.pairs.length;i++){const p=S.pairs[i];
+  if(!p[0]||!p[1])return'Cặp '+(i+1)+' chưa chọn đủ 2 bạn.';if(p[0]===p[1])return'Cặp '+(i+1)+' đang chọn cùng một bạn hai lần.';
+  if(!S.students.includes(p[0])||!S.students.includes(p[1]))return'Cặp '+(i+1)+' có tên không còn trong danh sách học sinh. Hãy chọn lại.'}
+ return''}
+$('save').onclick=async()=>{const e=validate();if(e)return toast(e,true);$('save').disabled=true;
+ try{const r=await sb.from('settings').update({class_name:S.class_name,start_date:S.start_date,rule:S.rule,students:S.students,pairs:S.pairs,room:S.room,updated_at:new Date().toISOString()}).eq('id',1).select();
+  if(r.error)throw r.error;if(!r.data.length)throw new Error('Không có quyền ghi. Hãy đăng nhập lại.');toast('Đã lưu thành công.')}
+ catch(x){toast('Lưu thất bại: '+(x.message||'lỗi mạng'),true)}$('save').disabled=false};
+$('fi').onchange=e=>{file=e.target.files[0]||null;$('up').disabled=true;$('pvw').textContent='';if(prevUrl)URL.revokeObjectURL(prevUrl);if(!file)return;
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)){file=null;return toast('Chỉ nhận ảnh JPG, PNG hoặc WebP.',true)}
+ if(file.size>5*1024*1024){file=null;return toast('Ảnh lớn hơn 5 MB. Hãy chọn ảnh nhỏ hơn.',true)}
+ prevUrl=URL.createObjectURL(file);const i=new Image();i.src=prevUrl;i.style.cssText='width:100%;border-radius:10px';$('pvw').append(i);$('up').disabled=false};
+$('up').onclick=async()=>{if(!file)return;$('up').disabled=true;$('up').textContent='Đang tải lên…';
+ const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file.type],path='tkb-'+Date.now()+'.'+ext;let up=false;
+ try{const u=await sb.storage.from('timetable').upload(path,file,{contentType:file.type});if(u.error)throw u.error;up=true;
+  const url=sb.storage.from('timetable').getPublicUrl(path).data.publicUrl;
+  const r=await sb.from('settings').update({timetable_url:url,updated_at:new Date().toISOString()}).eq('id',1).select();
+  if(r.error)throw r.error;if(!r.data.length)throw new Error('Không có quyền ghi. Hãy đăng nhập lại.');
+  const old=S.timetable_url;S.timetable_url=url;cur();toast('Đã tải ảnh lên và lưu.');
+  if(old){try{await sb.storage.from('timetable').remove([decodeURIComponent(old.split('/').pop().split('?')[0])])}catch(_){}}
+  file=null;$('fi').value='';$('pvw').textContent='';}
+ catch(x){if(up){try{await sb.storage.from('timetable').remove([path])}catch(_){}}toast('Tải ảnh thất bại: '+(x.message||'lỗi mạng'),true);$('up').disabled=false}
+ $('up').textContent='Tải ảnh lên và lưu'};
+init();
+</script></body></html>

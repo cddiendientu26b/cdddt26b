@@ -1,0 +1,42 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Thông tin lớp học</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<header class="hero"><h1 id="cn">Lớp học</h1><div id="date">…</div><div id="clock" class="clock">--:--:--</div></header>
+<main>
+<div id="demo" class="banner" hidden>Đang hiển thị dữ liệu minh họa. Hãy đăng nhập trang quản trị để thay bằng dữ liệu thật.</div>
+<div id="err" class="banner" style="background:#fde3e3;color:#8a1a1f" hidden></div>
+<section class="card duty"><h2>🧹 Trực nhật hôm nay</h2><div id="duty" class="muted">Đang tải…</div></section>
+<section class="card"><h2>🏫 Phòng học</h2><div id="room" class="muted">Đang tải…</div></section>
+<section class="card tkb"><h2>📅 Thời khóa biểu</h2><div id="tkb" class="muted">Đang tải…</div></section>
+</main><footer><a href="admin.html">Trang quản trị</a></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id);let S=null,shown='';
+function renderDuty(){
+ if(!S)return;const today=vnNow().date,d=dutyFor(S,today),box=$('duty');box.className='';box.textContent='';
+ const msg=t=>{box.className='muted';box.textContent=t};
+ if(d.status==='empty')return msg('Chưa nhập danh sách trực nhật. Quản trị viên hãy vào trang quản trị để thêm.');
+ if(d.status==='notyet')return msg('Lịch trực chưa bắt đầu (ngày bắt đầu: '+fmtDate(S.start_date)+').');
+ if(d.status==='off'){const p=document.createElement('p');p.className='muted';p.textContent='Hôm nay không có lịch trực. Lần trực tiếp theo:';box.append(p);}
+ const w=document.createElement('div');w.className='names';
+ d.pair.forEach(n=>{const e=document.createElement('div');e.className='n';e.textContent=n;w.append(e)});box.append(w);
+ const m=document.createElement('p');m.className='muted';m.textContent='Cặp '+(d.idx+1)+'/'+d.total;box.append(m);}
+function renderRoom(){const r=S.room||{},b=$('room');b.textContent='';
+ if(!r.name){b.textContent='Chưa nhập thông tin phòng học.';return}
+ [['Phòng',r.name],['Tầng',r.floor],['Dãy',r.wing],['Ghi chú',r.note]].forEach(x=>{if(!x[1])return;
+  const p=document.createElement('div');const s=document.createElement('b');s.textContent=x[0]+': ';p.append(s,document.createTextNode(x[1]));p.style.color='var(--t)';b.append(p)});}
+function renderTkb(){const b=$('tkb');b.textContent='';
+ if(!S.timetable_url){b.textContent='Chưa có ảnh thời khóa biểu.';return}
+ b.textContent='Đang tải ảnh…';const im=new Image();im.alt='Thời khóa biểu';
+ im.onload=()=>{b.textContent='';b.append(im);im.onclick=()=>{const l=document.createElement('div');l.className='lb';
+  const c=document.createElement('button');c.textContent='Đóng';c.onclick=()=>l.remove();const i2=new Image();i2.src=im.src;l.append(i2,c);document.body.append(l)}};
+ im.onerror=()=>{b.textContent='Không tải được ảnh thời khóa biểu. Hãy thử tải lại trang.'};
+ im.src=S.timetable_url;}
+function tick(){const n=vnNow();$('clock').textContent=n.time;if(n.date!==shown){shown=n.date;$('date').textContent=fmtDate(n.date);renderDuty();}}
+setInterval(tick,1000);tick();
+loadSettings().then(d=>{S=d;$('cn').textContent=d.class_name||'Lớp học';document.title=d.class_name||'Thông tin lớp học';
+ $('demo').hidden=!JSON.stringify(d).includes('minh họa');renderDuty();renderRoom();renderTkb();})
+.catch(e=>{$('err').hidden=false;$('err').textContent='Không tải được dữ liệu: '+(e.message||'lỗi mạng')+'. Kiểm tra kết nối mạng rồi tải lại trang.';
+ ['duty','room','tkb'].forEach(k=>$(k).textContent='—')});
+</script></body></html>

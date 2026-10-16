@@ -1,12 +1,13 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Thông tin lớp học</title>
-<link rel="stylesheet" href="style.css"></head><body>
+<link rel="stylesheet" href="style.css?v=2"><link rel="stylesheet" href="holo.css?v=2"><style>.fundhint{margin-top:8px;padding:5px 10px;border-radius:999px;background:linear-gradient(90deg,#1e62d0,#6a5cf0);color:#fff;font-weight:600;font-size:.78rem;text-align:center;animation:pl 2s ease-in-out infinite}@keyframes pl{0%,100%{box-shadow:0 0 0 0 rgba(30,98,208,.45)}50%{box-shadow:0 0 0 5px rgba(30,98,208,0)}}@media (prefers-reduced-motion:reduce){.fundhint{animation:none}}</style>
+</head><body>
 <header class="hero"><h1 id="cn">Lớp học</h1><div id="date">…</div><div id="clock" class="clock">--:--:--</div></header>
 <main>
 <div id="demo" class="banner" hidden>Đang hiển thị dữ liệu minh họa. Hãy đăng nhập trang quản trị để thay bằng dữ liệu thật.</div>
 <div id="err" class="banner" style="background:#fde3e3;color:#8a1a1f" hidden></div>
 <section class="card duty"><h2>🧹 Trực nhật hôm nay</h2><div id="duty" class="muted">Đang tải…</div></section>
-<a class="card" href="quy.html" style="display:flex;justify-content:space-between;align-items:center;gap:8px;text-decoration:none;color:var(--bd);font-weight:700;border:2px solid var(--b)"><span>💰 Tiền quỹ hiện tại</span><span id="fundv">Xem chi tiết ›</span></a>
+<a class="card" href="quy.html" style="display:block;text-decoration:none;color:var(--bd);border:2px solid var(--b)"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700"><span>💰 Tiền quỹ hiện tại</span><span id="fundv">…</span></div><div class="fundhint">👆 Nhấn vào đây để xem chi tiết thu chi ›</div></a>
 <section class="card"><h2>🏫 Phòng học</h2><div id="room" class="muted">Đang tải…</div></section>
 <section class="card tkb"><h2>📅 Thời khóa biểu</h2><div id="tkb" class="muted">Đang tải…</div></section>
 </main><footer><a href="admin.html">Trang quản trị</a></footer>
@@ -30,8 +31,8 @@ function renderRoom(){const r=S.room||{},b=$('room');b.textContent='';
 function renderTkb(){const b=$('tkb');b.textContent='';
  if(!S.timetable_url){b.textContent='Chưa có ảnh thời khóa biểu.';return}
  b.textContent='Đang tải ảnh…';const im=new Image();im.alt='Thời khóa biểu';
- im.onload=()=>{b.textContent='';b.append(im);im.onclick=()=>{const l=document.createElement('div');l.className='lb';
-  const c=document.createElement('button');c.textContent='Đóng';c.onclick=()=>l.remove();const i2=new Image();i2.src=im.src;l.append(i2,c);document.body.append(l)}};
+ im.onload=()=>{b.textContent='';b.append(im);im.onclick=()=>{const l=document.createElement('div');l.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99;display:flex;align-items:center;justify-content:center;padding:12px';
+  const c=document.createElement('button');c.textContent='Đóng';c.onclick=()=>l.remove();const i2=new Image();i2.src=im.src;i2.style.cssText='max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:8px';c.style.cssText='position:fixed;top:10px;right:10px;z-index:100';l.onclick=e=>{if(e.target===l)l.remove()};l.append(i2,c);document.body.append(l)}};
  im.onerror=()=>{b.textContent='Không tải được ảnh thời khóa biểu. Hãy thử tải lại trang.'};
  im.src=S.timetable_url;}
 function tick(){const n=vnNow();$('clock').textContent=n.time;if(n.date!==shown){shown=n.date;$('date').textContent=fmtDate(n.date);renderDuty();}}

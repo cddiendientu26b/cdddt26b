@@ -1,14 +1,14 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản lý điểm danh</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản lý điểm danh</title><meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="style.css?v=2">
 <style>.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e3ebf8;font-size:.92rem}.row:last-child{border:0}
 .row button{padding:6px 10px;font-size:.85rem}.cnt{font-size:1.6rem;font-weight:700;color:var(--bd)}.code{font-size:2.8rem;font-weight:700;text-align:center;letter-spacing:6px;color:var(--bd)}
 .tag{font-size:.75rem;padding:2px 8px;border-radius:99px;background:#eef4fd;color:#124a9e;white-space:nowrap}.warn{background:#fff4cc;color:#6b4e00}
 pre{white-space:pre-wrap;background:#f4f7fc;padding:10px;border-radius:10px;font-size:.85rem}</style></head><body>
-<div class="top"><b>Quản lý điểm danh</b><span><a href="admin.html" style="color:#fff">Quản trị</a> · <a href="diemdanh.html" style="color:#fff">Trang SV</a></span></div>
+<div class="top" id="topbar" hidden><b>Quản lý điểm danh</b><span><a href="admin.html" style="color:#fff">Quản trị</a> · <a href="diemdanh.html" style="color:#fff">Trang SV</a> <button id="out">Đăng xuất</button></span></div>
 <main style="margin-top:14px">
 <section id="need" class="card" hidden><p>Bạn cần đăng nhập trước. <a href="admin.html">Mở trang đăng nhập</a>, đăng nhập xong quay lại trang này.</p></section>
-<div id="app" hidden style="display:grid;gap:14px">
+<div id="app" hidden><div style="display:grid;gap:14px">
 <section class="card"><h2>🔑 Mã buổi học (chỉ dùng khi bật "Yêu cầu mã")</h2><div id="code" class="code">------</div><p id="left" class="muted" style="text-align:center;margin:0"></p></section>
 <section class="card"><h2>📋 Điểm danh</h2><label for="dt">Ngày</label><input id="dt" type="date">
 <p>Có mặt: <span class="cnt" id="np">0</span> / <span id="nt">0</span> · Vắng: <span class="cnt" id="na">0</span></p><p class="muted">Chưa xác nhận ở lại: <b id="nu">0</b></p>
@@ -16,8 +16,12 @@ pre{white-space:pre-wrap;background:#f4f7fc;padding:10px;border-radius:10px;font
 <h2 style="margin-top:12px">Vắng</h2><div id="la" class="muted">…</div>
 <p><button id="csv" class="g">⬇ Tải CSV ngày này</button></p></section>
 <section class="card"><h2>🎫 Mã đăng ký sinh viên</h2>
-<p class="muted">Mã chỉ hiện MỘT lần khi tạo. Hãy sao chép hoặc tải ngay rồi gửi riêng từng bạn.</p>
-<p><button id="gen">Tạo mã cho SV chưa có mã</button></p><div id="out" hidden><pre id="outt"></pre><p><button id="cp" class="g">Sao chép</button> <button id="dl" class="g">Tải CSV</button></p></div>
+<p class="muted">Mã được lưu lại để xem lại sau, chỉ admin xem được.</p>
+<p style="display:flex;flex-wrap:wrap;gap:8px"><button id="gen">Tạo mã cho SV chưa có mã</button><button id="regen" class="g">Tạo lại tất cả</button><button id="cancelall" class="g">Hủy tất cả</button><button id="clearall" class="g">Xóa tất cả</button></p>
+<p class="muted" id="cstat">…</p>
+<label for="cf">Hiển thị</label><select id="cf"><option value="active">Đang hiệu lực</option><option value="all">Tất cả lịch sử</option></select>
+<div id="cl" class="muted" style="margin-top:8px">…</div>
+<p><button id="cp" class="g">Sao chép mã đang hiệu lực</button> <button id="dl" class="g">Tải CSV mã đang hiệu lực</button></p>
 <details><summary>Danh sách sinh viên (<span id="ns">0</span>)</summary><div id="ls"></div></details></section>
 <section class="card"><h2>🏫 Vị trí và giờ điểm danh</h2>
 <label for="lat">Vĩ độ</label><input id="lat" inputmode="decimal"><label for="lng">Kinh độ</label><input id="lng" inputmode="decimal">
@@ -26,7 +30,7 @@ pre{white-space:pre-wrap;background:#f4f7fc;padding:10px;border-radius:10px;font
 <label for="stay">Xác nhận còn ở trường sau (phút, 0 = tắt)</label><input id="stay" type="number" min="0" max="240">
 <label for="cend">Hạn xác nhận (giờ)</label><input id="cend" type="time">
 <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input id="rq" type="checkbox" style="width:auto"> Yêu cầu nhập mã buổi học khi điểm danh</label>
-<p><button id="here" class="g">📍 Dùng vị trí hiện tại</button> <button id="sv">Lưu</button></p></section></div></main>
+<p><button id="here" class="g">📍 Dùng vị trí hiện tại</button> <button id="sv">Lưu</button></p></section></div></div></main>
 <div id="toast" class="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script><script src="app.js"></script>
@@ -55,13 +59,35 @@ function render(){const m={};ST.forEach(s=>m[s.mssv]=s);const at={};AT.forEach(a
  const ls=$('ls');ls.textContent='';ST.forEach(s=>{const r=el('div',null,'row');r.append(el('span',s.mssv.slice(-4)+' · '+s.full_name));const b=el('span');
   b.append(el('span',!s.code_hash?'chưa có mã':!s.device_hash?'chờ kích hoạt':'đã gắn máy','tag'),' ');
   const x=el('button','Cấp lại mã','g');x.onclick=async()=>{if(!confirm('Cấp mã mới và gỡ máy cũ của '+s.full_name+'?'))return;await issue(s.mssv)};b.append(x);r.append(b);ls.append(r)})}
-async function issue(mssv){const r=await sb.rpc('issue_codes',mssv?{p_mssv:mssv}:{});if(r.error)return toast('Lỗi: '+r.error.message,true);
- LAST=r.data;if(!LAST.length)toast('Không có SV nào cần tạo mã mới.');else{$('out').hidden=false;$('outt').textContent=LAST.map(x=>x.out_mssv+' | '+x.out_name+' | '+x.out_code).join('\n');toast('Đã tạo '+LAST.length+' mã.')}load()}
-$('gen').onclick=()=>issue(null);
-$('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('outt').textContent);toast('Đã sao chép.')}catch(e){toast('Không sao chép được, hãy chọn và chép tay.',true)}};
+let CODES=[];
+const SL={active:'đang hiệu lực',used:'đã dùng',cancelled:'đã hủy'};
+const dt=x=>new Date(x).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const active=()=>CODES.filter(c=>c.status==='active');
+async function loadCodes(){const r=await sb.from('activation_codes').select('id,mssv,code,created_at,status,status_at,students(full_name)').order('id',{ascending:false}).limit(1000);
+ if(r.error)return toast('Không tải được lịch sử mã: '+r.error.message+' (đã chạy diemdanh-update2.sql chưa?)',true);CODES=r.data;renderCodes()}
+async function act(fn,args,msg){const r=await sb.rpc(fn,args||{});if(r.error)return toast('Lỗi: '+r.error.message,true);toast(msg(r.data));await loadCodes();load()}
+function renderCodes(){const n={active:0,used:0,cancelled:0};CODES.forEach(c=>n[c.status]++);
+ $('cstat').textContent='Đang hiệu lực: '+n.active+' · Đã dùng: '+n.used+' · Đã hủy: '+n.cancelled;
+ const L=CODES.filter(c=>$('cf').value==='all'||c.status==='active'),box=$('cl');box.textContent='';box.className='';
+ if(!L.length){box.className='muted';box.textContent='Chưa có mã nào.';return}
+ L.forEach(c=>{const r=el('div',null,'row'),t=el('span');t.append(el('b',c.code),' · '+(c.students?c.students.full_name:c.mssv));t.append(el('div',dt(c.created_at),'muted'));r.append(t);
+  const b=el('span');b.append(el('span',SL[c.status],c.status==='active'?'tag':'tag warn'),' ');
+  if(c.status==='active'){const x=el('button','Hủy','g');x.onclick=()=>act('cancel_code',{p_id:c.id},()=>'Đã hủy mã.');b.append(x)}
+  r.append(b);box.append(r)})}
+async function issue(mssv,all){const a={};if(mssv)a.p_mssv=mssv;if(all)a.p_all=true;const r=await sb.rpc('issue_codes',a);
+ if(r.error)return toast('Lỗi: '+r.error.message,true);
+ toast(r.data.length?'Đã tạo '+r.data.length+' mã (xem trong lịch sử bên dưới).':'Không có SV nào cần tạo mã mới.');await loadCodes();load()}
+$('gen').onclick=()=>issue(null,false);
+$('regen').onclick=()=>{if(confirm('Tạo lại mã cho tất cả SV chưa kích hoạt? Mã cũ chưa dùng sẽ bị hủy.'))issue(null,true)};
+$('cancelall').onclick=()=>{if(confirm('Hủy tất cả mã chưa dùng? SV chưa đăng ký sẽ không dùng được mã cũ nữa.'))act('cancel_codes',{},n=>'Đã hủy '+n+' mã.')};
+$('clearall').onclick=()=>{if(confirm('Xóa toàn bộ lịch sử mã? Mã chưa dùng cũng bị hủy. SV đã đăng ký máy không bị ảnh hưởng.'))act('clear_code_history',{},n=>'Đã xóa '+n+' dòng lịch sử.')};
+$('cf').onchange=renderCodes;
+$('cp').onclick=async()=>{const t=active().map(c=>c.mssv+' | '+(c.students?c.students.full_name:'')+' | '+c.code).join('\n');if(!t)return toast('Không có mã đang hiệu lực.',true);
+ try{await navigator.clipboard.writeText(t);toast('Đã sao chép '+active().length+' mã.')}catch(e){toast('Không sao chép được.',true)}};
+$('out').onclick=async()=>{await sb.auth.signOut();location.reload()};
 function dlcsv(name,rows){const t='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download=name;a.click()}
-$('dl').onclick=()=>dlcsv('ma-kich-hoat.csv',[['MSSV','Họ tên','Mã kích hoạt']].concat(LAST.map(x=>[x.out_mssv,x.out_name,x.out_code])));
+$('dl').onclick=()=>dlcsv('ma-kich-hoat.csv',[['MSSV','Họ tên','Mã kích hoạt','Tạo lúc']].concat(active().map(c=>[c.mssv,c.students?c.students.full_name:'',c.code,dt(c.created_at)])));
 $('csv').onclick=()=>{const at={};AT.forEach(a=>at[a.mssv]=a);dlcsv('diem-danh-'+$('dt').value+'.csv',[['MSSV','Họ tên','Trạng thái','Giờ','Khoảng cách (m)','Ghi chú','Xác nhận ở lại']].concat(ST.map(s=>{const a=at[s.mssv];return[s.mssv,s.full_name,a?'Có mặt':'Vắng',a?hm(a.checked_at):'',a&&a.distance_m!=null?a.distance_m:'',a&&a.flag?a.flag:'',a?(a.confirmed_at?hm(a.confirmed_at):conf(a)?'không cần':'chưa xác nhận'):'']})))};
 $('dt').onchange=load;
 async function cfg(){const r=await sb.from('class_config').select('*').eq('id',1).single();if(r.error)return;const c=r.data;CFG=c;$('stay').value=c.stay_minutes;$('cend').value=String(c.confirm_end).slice(0,5);$('rq').checked=c.require_code;
@@ -75,5 +101,6 @@ $('sv').onclick=async()=>{const lat=Number($('lat').value),lng=Number($('lng').v
  if(r.error||!r.data.length)return toast('Lưu thất bại'+(r.error?': '+r.error.message:'. Hãy đăng nhập lại.'),true);toast('Đã lưu.');cfg().then(load)};
 (async()=>{if(!configOk){$('need').hidden=false;$('need').textContent='Chưa cấu hình config.js.';return}
  const {data}=await sb.auth.getSession();if(!data.session){$('need').hidden=false;return}
- $('app').hidden=false;$('dt').value=vnNow().date;tick();setInterval(tick,3000);await cfg();load()})();
+ const ad=await sb.rpc('is_admin');if(ad.error||ad.data!==true){$('need').hidden=false;$('need').textContent='Tài khoản này không có quyền quản trị.';return}
+ $('topbar').hidden=false;$('app').hidden=false;sb.auth.onAuthStateChange(e=>{if(e==='SIGNED_OUT')location.reload()});$('dt').value=vnNow().date;tick();setInterval(tick,3000);await cfg();load();loadCodes()})();
 </script></body></html>

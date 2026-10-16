@@ -9,7 +9,7 @@ main{max-width:760px;margin:-18px auto 0;padding:0 14px 30px;display:grid;gap:14
 .duty .n{background:var(--bg);border-radius:12px;padding:16px 8px;text-align:center;font-weight:700;font-size:1.15rem}
 .muted{color:var(--m);font-size:.9rem}.banner{background:#fff4cc;color:#6b4e00;padding:8px 12px;border-radius:10px;font-size:.9rem}
 .tkb img{width:100%;height:auto;border-radius:10px;cursor:zoom-in;display:block}
-.lb{position:fixed;inset:0;background:#000d;overflow:auto;z-index:9}.lb img{width:220%;max-width:none;display:block}
+.lb{position:fixed;inset:0;background:#000e;z-index:9;display:flex;align-items:center;justify-content:center;padding:12px}.lb img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:8px}
 .lb button{position:fixed;top:10px;right:10px}
 label{display:block;margin:10px 0 4px;font-weight:600;font-size:.92rem}
 input,select,textarea,button{font:inherit;padding:10px;border:1px solid #c5d3ea;border-radius:10px;width:100%;background:#fff;color:var(--t)}

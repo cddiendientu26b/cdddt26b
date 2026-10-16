@@ -1,0 +1,79 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản lý điểm danh</title>
+<link rel="stylesheet" href="style.css?v=2">
+<style>.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e3ebf8;font-size:.92rem}.row:last-child{border:0}
+.row button{padding:6px 10px;font-size:.85rem}.cnt{font-size:1.6rem;font-weight:700;color:var(--bd)}.code{font-size:2.8rem;font-weight:700;text-align:center;letter-spacing:6px;color:var(--bd)}
+.tag{font-size:.75rem;padding:2px 8px;border-radius:99px;background:#eef4fd;color:#124a9e;white-space:nowrap}.warn{background:#fff4cc;color:#6b4e00}
+pre{white-space:pre-wrap;background:#f4f7fc;padding:10px;border-radius:10px;font-size:.85rem}</style></head><body>
+<div class="top"><b>Quản lý điểm danh</b><span><a href="admin.html" style="color:#fff">Quản trị</a> · <a href="diemdanh.html" style="color:#fff">Trang SV</a></span></div>
+<main style="margin-top:14px">
+<section id="need" class="card" hidden><p>Bạn cần đăng nhập trước. <a href="admin.html">Mở trang đăng nhập</a>, đăng nhập xong quay lại trang này.</p></section>
+<div id="app" hidden style="display:grid;gap:14px">
+<section class="card"><h2>🔑 Mã buổi học (chỉ dùng khi bật "Yêu cầu mã")</h2><div id="code" class="code">------</div><p id="left" class="muted" style="text-align:center;margin:0"></p></section>
+<section class="card"><h2>📋 Điểm danh</h2><label for="dt">Ngày</label><input id="dt" type="date">
+<p>Có mặt: <span class="cnt" id="np">0</span> / <span id="nt">0</span> · Vắng: <span class="cnt" id="na">0</span></p><p class="muted">Chưa xác nhận ở lại: <b id="nu">0</b></p>
+<h2 style="margin-top:12px">Có mặt</h2><div id="lp" class="muted">…</div>
+<h2 style="margin-top:12px">Vắng</h2><div id="la" class="muted">…</div>
+<p><button id="csv" class="g">⬇ Tải CSV ngày này</button></p></section>
+<section class="card"><h2>🎫 Mã đăng ký sinh viên</h2>
+<p class="muted">Mã chỉ hiện MỘT lần khi tạo. Hãy sao chép hoặc tải ngay rồi gửi riêng từng bạn.</p>
+<p><button id="gen">Tạo mã cho SV chưa có mã</button></p><div id="out" hidden><pre id="outt"></pre><p><button id="cp" class="g">Sao chép</button> <button id="dl" class="g">Tải CSV</button></p></div>
+<details><summary>Danh sách sinh viên (<span id="ns">0</span>)</summary><div id="ls"></div></details></section>
+<section class="card"><h2>🏫 Vị trí và giờ điểm danh</h2>
+<label for="lat">Vĩ độ</label><input id="lat" inputmode="decimal"><label for="lng">Kinh độ</label><input id="lng" inputmode="decimal">
+<label for="rad">Bán kính cho phép (m)</label><input id="rad" type="number" min="20" max="2000">
+<label for="s1">Bắt đầu</label><input id="s1" type="time"><label for="s2">Kết thúc</label><input id="s2" type="time">
+<label for="stay">Xác nhận còn ở trường sau (phút, 0 = tắt)</label><input id="stay" type="number" min="0" max="240">
+<label for="cend">Hạn xác nhận (giờ)</label><input id="cend" type="time">
+<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input id="rq" type="checkbox" style="width:auto"> Yêu cầu nhập mã buổi học khi điểm danh</label>
+<p><button id="here" class="g">📍 Dùng vị trí hiện tại</button> <button id="sv">Lưu</button></p></section></div></main>
+<div id="toast" class="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id);let ST=[],AT=[],LAST=[],CFG=null;const conf=a=>!CFG||!CFG.stay_minutes||CFG.stay_minutes<=0||a.confirmed_at||a.flag==='manual';
+function toast(m,e){const t=$('toast');t.textContent=m;t.className='toast '+(e?'err':'ok');t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,6000)}
+function el(t,x,c){const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e}
+const hm=x=>new Date(x).toLocaleTimeString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'});
+async function tick(){const r=await sb.rpc('session_code');if(r.error)return;$('code').textContent=r.data.code.replace(/(\d{3})(\d{3})/,'$1 $2');$('left').textContent='Đổi mã sau '+r.data.seconds_left+' giây'}
+async function load(){const s=await sb.from('students').select('mssv,full_name,code_hash,device_hash').order('mssv').limit(1000);
+ const a=await sb.from('attendance').select('*').eq('session_date',$('dt').value);
+ if(s.error||a.error)return toast('Không tải được: '+(s.error||a.error).message,true);ST=s.data;AT=a.data;render()}
+function render(){const m={};ST.forEach(s=>m[s.mssv]=s);const at={};AT.forEach(a=>at[a.mssv]=a);
+ const P=AT.slice().sort((x,y)=>x.checked_at<y.checked_at?-1:1),A=ST.filter(s=>!at[s.mssv]);
+ $('np').textContent=P.length;$('nt').textContent=ST.length;$('na').textContent=A.length;$('nu').textContent=AT.filter(a=>!conf(a)).length;$('ns').textContent=ST.length;
+ const lp=$('lp');lp.textContent='';lp.className='';if(!P.length){lp.className='muted';lp.textContent='Chưa có ai.'}
+ P.forEach(a=>{const r=el('div',null,'row'),t=el('span',hm(a.checked_at)+' · '+(m[a.mssv]?m[a.mssv].full_name:a.mssv));r.append(t);
+  const b=el('span');if(a.flag)b.append(el('span',a.flag==='manual'?'thủ công':a.flag==='low_acc'?'GPS yếu':'⚠ '+a.flag,'tag warn'),' ');
+  if(!conf(a))b.append(el('span','chưa xác nhận ở lại','tag warn'),' ');else if(a.confirmed_at)b.append(el('span','ở lại '+hm(a.confirmed_at),'tag'),' ');
+  if(a.distance_m!=null)b.append(el('span',a.distance_m+' m','tag'),' ');
+  const x=el('button','Hủy','g');x.onclick=async()=>{if(!confirm('Hủy điểm danh của '+(m[a.mssv]?m[a.mssv].full_name:a.mssv)+'?'))return;
+   const r2=await sb.from('attendance').delete().eq('id',a.id);if(r2.error)return toast(r2.error.message,true);load()};b.append(x);r.append(b);lp.append(r)});
+ const la=$('la');la.textContent='';la.className='';if(!A.length){la.className='muted';la.textContent='Không ai vắng.'}
+ A.forEach(s=>{const r=el('div',null,'row');r.append(el('span',s.full_name));const x=el('button','Điểm danh tay','g');
+  x.onclick=async()=>{const r2=await sb.from('attendance').insert({mssv:s.mssv,session_date:$('dt').value,flag:'manual'});if(r2.error)return toast(r2.error.message,true);load()};r.append(x);la.append(r)});
+ const ls=$('ls');ls.textContent='';ST.forEach(s=>{const r=el('div',null,'row');r.append(el('span',s.mssv.slice(-4)+' · '+s.full_name));const b=el('span');
+  b.append(el('span',!s.code_hash?'chưa có mã':!s.device_hash?'chờ kích hoạt':'đã gắn máy','tag'),' ');
+  const x=el('button','Cấp lại mã','g');x.onclick=async()=>{if(!confirm('Cấp mã mới và gỡ máy cũ của '+s.full_name+'?'))return;await issue(s.mssv)};b.append(x);r.append(b);ls.append(r)})}
+async function issue(mssv){const r=await sb.rpc('issue_codes',mssv?{p_mssv:mssv}:{});if(r.error)return toast('Lỗi: '+r.error.message,true);
+ LAST=r.data;if(!LAST.length)toast('Không có SV nào cần tạo mã mới.');else{$('out').hidden=false;$('outt').textContent=LAST.map(x=>x.out_mssv+' | '+x.out_name+' | '+x.out_code).join('\n');toast('Đã tạo '+LAST.length+' mã.')}load()}
+$('gen').onclick=()=>issue(null);
+$('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('outt').textContent);toast('Đã sao chép.')}catch(e){toast('Không sao chép được, hãy chọn và chép tay.',true)}};
+function dlcsv(name,rows){const t='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download=name;a.click()}
+$('dl').onclick=()=>dlcsv('ma-kich-hoat.csv',[['MSSV','Họ tên','Mã kích hoạt']].concat(LAST.map(x=>[x.out_mssv,x.out_name,x.out_code])));
+$('csv').onclick=()=>{const at={};AT.forEach(a=>at[a.mssv]=a);dlcsv('diem-danh-'+$('dt').value+'.csv',[['MSSV','Họ tên','Trạng thái','Giờ','Khoảng cách (m)','Ghi chú','Xác nhận ở lại']].concat(ST.map(s=>{const a=at[s.mssv];return[s.mssv,s.full_name,a?'Có mặt':'Vắng',a?hm(a.checked_at):'',a&&a.distance_m!=null?a.distance_m:'',a&&a.flag?a.flag:'',a?(a.confirmed_at?hm(a.confirmed_at):conf(a)?'không cần':'chưa xác nhận'):'']})))};
+$('dt').onchange=load;
+async function cfg(){const r=await sb.from('class_config').select('*').eq('id',1).single();if(r.error)return;const c=r.data;CFG=c;$('stay').value=c.stay_minutes;$('cend').value=String(c.confirm_end).slice(0,5);$('rq').checked=c.require_code;
+ $('lat').value=c.school_lat;$('lng').value=c.school_lng;$('rad').value=c.radius_meters;$('s1').value=c.checkin_start.slice(0,5);$('s2').value=c.checkin_end.slice(0,5)}
+$('here').onclick=()=>{navigator.geolocation.getCurrentPosition(p=>{$('lat').value=p.coords.latitude.toFixed(6);$('lng').value=p.coords.longitude.toFixed(6);toast('Đã điền vị trí hiện tại. Nhấn Lưu để áp dụng.')},()=>toast('Không lấy được vị trí.',true),{enableHighAccuracy:true,timeout:20000})};
+$('sv').onclick=async()=>{const lat=Number($('lat').value),lng=Number($('lng').value),rad=Number($('rad').value);
+ if(!(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)||!$('lat').value||!$('lng').value)return toast('Tọa độ không hợp lệ.',true);
+ if(!(rad>=20&&rad<=2000))return toast('Bán kính từ 20 đến 2000 m.',true);if(!$('s1').value||!$('s2').value||$('s1').value>=$('s2').value)return toast('Giờ bắt đầu phải trước giờ kết thúc.',true);
+ const sm=Number($('stay').value);if(!Number.isInteger(sm)||sm<0||sm>240||!$('cend').value)return toast('Số phút xác nhận từ 0 đến 240 và phải có hạn xác nhận.',true);
+ const r=await sb.from('class_config').update({school_lat:lat,school_lng:lng,radius_meters:rad,checkin_start:$('s1').value,checkin_end:$('s2').value,stay_minutes:Number($('stay').value),confirm_end:$('cend').value,require_code:$('rq').checked}).eq('id',1).select();
+ if(r.error||!r.data.length)return toast('Lưu thất bại'+(r.error?': '+r.error.message:'. Hãy đăng nhập lại.'),true);toast('Đã lưu.');cfg().then(load)};
+(async()=>{if(!configOk){$('need').hidden=false;$('need').textContent='Chưa cấu hình config.js.';return}
+ const {data}=await sb.auth.getSession();if(!data.session){$('need').hidden=false;return}
+ $('app').hidden=false;$('dt').value=vnNow().date;tick();setInterval(tick,3000);await cfg();load()})();
+</script></body></html>

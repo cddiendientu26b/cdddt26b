@@ -1,0 +1,79 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Điểm danh</title>
+<link rel="stylesheet" href="style.css?v=2">
+<style>.st{padding:10px 12px;border-radius:12px;margin-top:10px;font-weight:600}.ok{background:#e0f6ea;color:#0f7b4a}.no{background:#fde3e3;color:#8a1a1f}.in{background:#eef4fd;color:#124a9e}
+.big{font-size:2rem;font-weight:700;text-align:center;letter-spacing:8px}</style></head><body>
+<header class="hero"><h1>📍 Điểm danh</h1><div id="sub">Đang tải…</div></header>
+<main>
+<div id="msg" class="st" hidden></div>
+<section class="card" id="reg" hidden><h2>Đăng ký thiết bị (làm 1 lần)</h2>
+<p class="muted">Nhập MSSV và mã kích hoạt được gửi riêng cho bạn. Mã gắn tên bạn với chiếc điện thoại này. Mỗi máy chỉ đăng ký cho 1 người.</p>
+<label for="ms">MSSV</label><input id="ms" inputmode="numeric" maxlength="12" autocomplete="off">
+<label for="mk">Mã kích hoạt</label><input id="mk" maxlength="8" autocomplete="off" style="text-transform:uppercase">
+<p><button id="bact">Đăng ký</button></p></section>
+<section class="card" id="ci" hidden><h2 id="hi">…</h2><div id="gps" class="st in">Đang lấy vị trí…</div>
+<div id="codebox" hidden><label for="cd">Mã buổi học (xem trên bảng hoặc màn hình của giảng viên)</label>
+<input id="cd" class="big" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="______"></div>
+<div id="stay" class="st in" hidden><div id="staytxt"></div><p style="margin:10px 0 0"><button id="bstay" disabled>…</button></p></div>
+<p><button id="bgps" class="g">📍 Lấy lại vị trí</button></p></section>
+</main><footer><a href="index.html">Trang lớp</a></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id);let C=null,ME=null,TM=null;
+function show(t,c){const m=$('msg');m.hidden=false;m.className='st '+c;m.textContent=t}
+function dev(){let d=null;try{d=localStorage.getItem('dd_device')}catch(e){}
+ if(!d||d.length<32){const a=new Uint8Array(16);crypto.getRandomValues(a);d=Array.from(a,x=>x.toString(16).padStart(2,'0')).join('');
+  try{localStorage.setItem('dd_device',d);if(localStorage.getItem('dd_device')!==d)throw 0}catch(e){show('Trình duyệt không cho lưu dữ liệu. Hãy tắt chế độ ẩn danh rồi mở lại.','no')}}
+ return d}
+const rad=x=>x*Math.PI/180;
+function dist(a,b,c,d){const h=Math.sin(rad(c-a)/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(rad(d-b)/2)**2;return 2*6371000*Math.asin(Math.min(1,Math.sqrt(h)))}
+function getPos(){return new Promise((res,rej)=>{if(!navigator.geolocation)return rej(new Error('Thiết bị không hỗ trợ GPS.'));
+ navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
+ e=>rej(new Error(e.code===1?'Bạn chưa cho phép truy cập vị trí. Hãy bật quyền Vị trí cho trình duyệt rồi tải lại trang.':'Không lấy được vị trí. Hãy bật GPS và thử lại.')),
+ {enableHighAccuracy:true,timeout:20000,maximumAge:0})})}
+const hm=d=>d.toLocaleTimeString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'});
+async function doCheckIn(code){show('Đang điểm danh…','in');
+ try{const p=await getPos(),r=await sb.rpc('check_in',{p_device:dev(),p_code:code||null,p_lat:p.lat,p_lng:p.lng,p_acc:p.acc});
+  if(r.error)throw r.error;const d=r.data;
+  if(d.ok){ME.checked_at=d.time||'';ME.checked_ts=new Date().toISOString();$('codebox').hidden=true;$('gps').hidden=true;$('bgps').hidden=true;
+   show('✅ '+d.message+(d.time?' Lúc '+d.time+'.':''),'ok');renderStay(true)}
+  else{show(d.error,'no');$('cd').value=''}}
+ catch(e){show(e.message||'Lỗi mạng, hãy thử lại.','no');$('cd').value=''}$('cd').disabled=false}
+async function refreshGps(){const g=$('gps');g.className='st in';g.textContent='Đang lấy vị trí…';
+ try{const p=await getPos(),d=dist(p.lat,p.lng,C.school_lat,C.school_lng),inr=d<=C.radius_meters;
+  g.className='st '+(inr?'ok':'no');
+  g.textContent=(inr?'Bạn đang ở trong khu vực trường':'Bạn đang ở ngoài khu vực trường')+' (cách khoảng '+Math.round(d)+' m, sai số GPS '+Math.round(p.acc)+' m)';
+  if(!inr){$('codebox').hidden=true;return}
+  if(C.require_code){$('codebox').hidden=false;$('cd').focus()}else doCheckIn(null)}
+ catch(e){g.className='st no';g.textContent=e.message;$('codebox').hidden=true}}
+function renderStay(fresh){clearInterval(TM);const box=$('stay');
+ if(!C.stay_minutes||C.stay_minutes<=0||ME.confirmed_at){box.hidden=true;if(!fresh)show('✅ Bạn đã điểm danh hôm nay lúc '+ME.checked_at+(ME.confirmed_at?' và xác nhận ở lại lúc '+ME.confirmed_at:'')+'.','ok');$('gps').hidden=true;$('bgps').hidden=true;return}
+ $('gps').hidden=true;$('bgps').hidden=true;box.hidden=false;
+ const earliest=new Date(new Date(ME.checked_ts).getTime()+C.stay_minutes*60000);
+ $('staytxt').textContent='Bạn đã điểm danh lúc '+ME.checked_at+'. Để được tính có mặt đầy đủ, hãy mở lại trang này từ '+hm(earliest)+' đến '+C.confirm_end.slice(0,5)+' khi còn ở trường và nhấn nút xác nhận.';
+ const b=$('bstay');const upd=()=>{const left=earliest-Date.now();if(left>0){b.disabled=true;b.textContent='Xác nhận sau '+Math.ceil(left/60000)+' phút'}else{b.disabled=false;b.textContent='✅ Tôi vẫn còn ở trường';clearInterval(TM)}};
+ upd();TM=setInterval(upd,15000)}
+$('bstay').onclick=async()=>{$('bstay').disabled=true;show('Đang xác nhận…','in');
+ try{const p=await getPos(),r=await sb.rpc('confirm_stay',{p_device:dev(),p_lat:p.lat,p_lng:p.lng,p_acc:p.acc});if(r.error)throw r.error;
+  if(r.data.ok){ME.confirmed_at=hm(new Date());show('✅ '+r.data.message,'ok');renderStay(true)}else{show(r.data.error,'no');$('bstay').disabled=false}}
+ catch(e){show(e.message||'Lỗi mạng, hãy thử lại.','no');$('bstay').disabled=false}};
+$('bgps').onclick=refreshGps;
+$('cd').oninput=()=>{const v=$('cd').value.replace(/\D/g,'');$('cd').value=v;if(v.length<6)return;$('cd').disabled=true;doCheckIn(v)};
+$('bact').onclick=async()=>{const m=$('ms').value.trim(),k=$('mk').value.trim();
+ if(!/^\d{6,12}$/.test(m))return show('MSSV không hợp lệ.','no');if(k.length<4)return show('Hãy nhập mã kích hoạt.','no');
+ $('bact').disabled=true;
+ try{const r=await sb.rpc('activate_student',{p_mssv:m,p_code:k,p_device:dev()});if(r.error)throw r.error;
+  if(r.data.ok)location.reload();else show(r.data.error,'no')}
+ catch(e){show(e.message||'Lỗi mạng, hãy thử lại.','no')}
+ $('bact').disabled=false};
+(async()=>{if(!configOk)return show('Chưa cấu hình config.js.','no');
+ try{const [cf,w]=await Promise.all([sb.from('class_config').select('*').eq('id',1).single(),sb.rpc('whoami',{p_device:dev()})]);
+  if(cf.error)throw cf.error;if(w.error)throw w.error;C=cf.data;ME=w.data;
+  $('sub').textContent=C.school_name+' · Giờ điểm danh '+C.checkin_start.slice(0,5)+' – '+C.checkin_end.slice(0,5);
+  if(!ME.ok){$('reg').hidden=false;return}
+  $('ci').hidden=false;$('hi').textContent='Xin chào, '+ME.full_name+' ('+ME.mssv+')';
+  if(ME.checked_at){renderStay(false);return}
+  refreshGps()}
+ catch(e){show('Không tải được dữ liệu: '+(e.message||'lỗi mạng. Nếu chưa chạy diemdanh-update1.sql thì hãy chạy file đó.'),'no')}})();
+</script></body></html>

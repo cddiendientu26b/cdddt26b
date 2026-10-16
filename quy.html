@@ -1,0 +1,26 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Tiền quỹ lớp</title>
+<link rel="stylesheet" href="style.css">
+<style>.sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}.sum div{background:var(--bg);border-radius:12px;padding:10px 4px;font-size:.85rem}.sum b{display:block;font-size:1rem}
+.row{border-bottom:1px solid #e3ebf8;padding:10px 0}.row:last-child{border:0}.l{display:flex;justify-content:space-between;gap:8px}.thu{color:var(--ok)}.chi{color:var(--er)}.pf{margin-top:6px;width:90px;height:90px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block}</style></head><body>
+<header class="hero"><div style="text-align:left"><a href="index.html" style="color:#fff">← Trang chủ</a></div><h1>💰 Tiền quỹ hiện tại</h1><div id="bal" class="clock">…</div></header>
+<main><section class="card"><div class="sum"><div>Tổng thu<b id="t" class="thu">…</b></div><div>Tổng chi<b id="c" class="chi">…</b></div><div>Còn lại<b id="r">…</b></div></div></section>
+<section class="card"><h2>Chi tiết thu chi</h2><div id="list" class="muted">Đang tải…</div></section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id),money=n=>n.toLocaleString('vi-VN')+'đ',dmy=s=>s.split('-').reverse().join('/');
+function lightbox(src){const l=document.createElement('div');l.className='lb';const i=new Image();i.src=src;const c=document.createElement('button');c.textContent='Đóng';c.onclick=()=>l.remove();l.append(i,c);document.body.append(l)}
+function render(d){let t=0,c=0;d.forEach(e=>{if(e.kind==='thu')t+=e.amount;else c+=e.amount});
+ $('t').textContent=money(t);$('c').textContent=money(c);$('r').textContent=money(t-c);$('bal').textContent=money(t-c);
+ const L=$('list');L.textContent='';L.className='';if(!d.length){L.className='muted';L.textContent='Chưa có khoản thu chi nào.';return}
+ d.forEach(e=>{const r=document.createElement('div');r.className='row';const a=document.createElement('div');a.className='l';
+  const x=document.createElement('span');x.textContent=dmy(e.entry_date)+' · '+e.description;
+  const y=document.createElement('b');y.className=e.kind;y.textContent=(e.kind==='thu'?'+':'−')+money(e.amount);a.append(x,y);r.append(a);
+  if(e.proof_url){const im=new Image();im.src=e.proof_url;im.alt='Minh chứng';im.className='pf';im.loading='lazy';im.onclick=()=>lightbox(e.proof_url);r.append(im)}
+  L.append(r)})}
+(async()=>{try{if(!sb)throw new Error('Chưa cấu hình config.js');
+ const r=await sb.from('fund_entries').select('*').order('entry_date',{ascending:false}).order('id',{ascending:false}).limit(1000);
+ if(r.error)throw r.error;render(r.data)}
+ catch(e){$('list').textContent='Không tải được dữ liệu: '+(e.message||'lỗi mạng')+'. Nếu chưa chạy fund.sql thì hãy chạy file đó trong Supabase.'}})();
+</script></body></html>

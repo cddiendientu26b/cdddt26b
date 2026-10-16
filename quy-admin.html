@@ -1,0 +1,60 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản lý tiền quỹ</title>
+<link rel="stylesheet" href="style.css">
+<style>.row{border-bottom:1px solid #e3ebf8;padding:10px 0}.row:last-child{border:0}.l{display:flex;justify-content:space-between;gap:8px}.thu{color:var(--ok)}.chi{color:var(--er)}.pf{margin-top:6px;width:80px;height:80px;object-fit:cover;border-radius:8px;display:block}</style></head><body>
+<div class="top"><b>💰 Quản lý tiền quỹ</b><span><a href="admin.html" style="color:#fff">Quản trị</a> · <a href="quy.html" style="color:#fff">Xem quỹ</a></span></div>
+<main style="margin-top:14px">
+<section id="need" class="card" hidden><p>Bạn cần đăng nhập trước. <a href="admin.html">Mở trang đăng nhập</a>, đăng nhập xong quay lại trang này.</p></section>
+<div id="app" hidden style="display:grid;gap:14px">
+<section class="card"><h2>Số dư hiện tại: <span id="bal">…</span></h2></section>
+<section class="card"><h2>Thêm khoản thu / chi</h2>
+<label for="date">Ngày</label><input id="date" type="date">
+<label for="kind">Loại</label><select id="kind"><option value="thu">Thu (nộp quỹ)</option><option value="chi">Chi</option></select>
+<label for="amt">Số tiền (đồng)</label><input id="amt" type="number" inputmode="numeric" min="1" step="1" placeholder="Ví dụ: 50000">
+<label for="desc">Nội dung</label><input id="desc" maxlength="200" placeholder="Ví dụ: Mua chổi, khăn lau bảng">
+<label for="fi">Ảnh minh chứng (không bắt buộc, JPG/PNG/WebP, tối đa 5 MB)</label><input id="fi" type="file" accept="image/jpeg,image/png,image/webp">
+<div id="pvw" style="margin-top:8px"></div><p><button id="add" style="width:100%">Thêm khoản này</button></p></section>
+<section class="card"><h2>Các khoản đã nhập</h2><div id="list" class="muted">Đang tải…</div></section></div></main>
+<div id="toast" class="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id),money=n=>n.toLocaleString('vi-VN')+'đ',dmy=s=>s.split('-').reverse().join('/');
+let file=null,pu=null;
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast '+(err?'err':'ok');t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,6000)}
+const fname=u=>decodeURIComponent(u.split('/').pop().split('?')[0]);
+async function load(){const r=await sb.from('fund_entries').select('*').order('entry_date',{ascending:false}).order('id',{ascending:false}).limit(1000);
+ if(r.error)return toast('Không tải được: '+r.error.message+' (đã chạy fund.sql chưa?)',true);
+ let s=0;const L=$('list');L.textContent='';L.className='';
+ if(!r.data.length){L.className='muted';L.textContent='Chưa có khoản nào.'}
+ r.data.forEach(e=>{s+=e.kind==='thu'?e.amount:-e.amount;const row=document.createElement('div');row.className='row';const a=document.createElement('div');a.className='l';
+  const x=document.createElement('span');x.textContent=dmy(e.entry_date)+' · '+e.description;const y=document.createElement('b');y.className=e.kind;y.textContent=(e.kind==='thu'?'+':'−')+money(e.amount);a.append(x,y);row.append(a);
+  if(e.proof_url){const im=new Image();im.src=e.proof_url;im.className='pf';im.alt='Minh chứng';row.append(im)}
+  const d=document.createElement('button');d.textContent='🗑 Xóa';d.className='g';d.style.marginTop='6px';d.onclick=()=>del(e);row.append(d);L.append(row)});
+ $('bal').textContent=money(s)}
+async function del(e){if(!confirm('Xóa khoản "'+e.description+'"? Không thể khôi phục.'))return;
+ const r=await sb.from('fund_entries').delete().eq('id',e.id).select();
+ if(r.error||!r.data.length)return toast('Xóa thất bại'+(r.error?': '+r.error.message:'. Hãy đăng nhập lại.'),true);
+ if(e.proof_url){try{await sb.storage.from('timetable').remove([fname(e.proof_url)])}catch(_){}}
+ toast('Đã xóa.');load()}
+$('fi').onchange=ev=>{file=ev.target.files[0]||null;$('pvw').textContent='';if(pu)URL.revokeObjectURL(pu);if(!file)return;
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)){file=null;$('fi').value='';return toast('Chỉ nhận ảnh JPG, PNG hoặc WebP.',true)}
+ if(file.size>5*1024*1024){file=null;$('fi').value='';return toast('Ảnh lớn hơn 5 MB.',true)}
+ pu=URL.createObjectURL(file);const i=new Image();i.src=pu;i.style.cssText='width:100%;border-radius:10px';$('pvw').append(i)};
+$('add').onclick=async()=>{const date=$('date').value,kind=$('kind').value,amt=Number($('amt').value),desc=$('desc').value.trim();
+ if(!date)return toast('Hãy chọn ngày.',true);
+ if(!Number.isInteger(amt)||amt<=0||amt>1e12)return toast('Số tiền phải là số nguyên dương.',true);
+ if(!desc||desc.length>200)return toast('Nội dung phải từ 1 đến 200 ký tự.',true);
+ $('add').disabled=true;let path=null,url=null;
+ try{if(file){const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file.type];path='fund-'+Date.now()+'.'+ext;
+   const u=await sb.storage.from('timetable').upload(path,file,{contentType:file.type});if(u.error)throw u.error;
+   url=sb.storage.from('timetable').getPublicUrl(path).data.publicUrl}
+  const r=await sb.from('fund_entries').insert({entry_date:date,kind:kind,amount:amt,description:desc,proof_url:url}).select();
+  if(r.error)throw r.error;if(!r.data.length)throw new Error('Không có quyền ghi. Hãy đăng nhập lại.');
+  $('amt').value='';$('desc').value='';$('fi').value='';$('pvw').textContent='';file=null;toast('Đã thêm khoản.');await load()}
+ catch(x){if(path){try{await sb.storage.from('timetable').remove([path])}catch(_){}}toast('Thêm thất bại: '+(x.message||'lỗi mạng'),true)}
+ $('add').disabled=false};
+(async()=>{if(!configOk){$('need').hidden=false;$('need').textContent='Chưa cấu hình config.js.';return}
+ const {data}=await sb.auth.getSession();if(!data.session){$('need').hidden=false;return}
+ $('app').hidden=false;$('date').value=vnNow().date;load()})();
+</script></body></html>

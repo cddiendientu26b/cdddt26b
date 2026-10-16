@@ -8,6 +8,7 @@
 <section class="card duty"><h2>🧹 Trực nhật hôm nay</h2><div id="duty" class="muted">Đang tải…</div></section>
 <section class="card"><h2>🏫 Phòng học</h2><div id="room" class="muted">Đang tải…</div></section>
 <section class="card tkb"><h2>📅 Thời khóa biểu</h2><div id="tkb" class="muted">Đang tải…</div></section>
+<a class="card" href="quy.html" style="display:flex;justify-content:space-between;align-items:center;gap:8px;text-decoration:none;color:var(--bd);font-weight:700;border:2px solid var(--b)"><span>💰 Tiền quỹ hiện tại</span><span id="fundv">Xem chi tiết ›</span></a>
 </main><footer><a href="admin.html">Trang quản trị</a></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script><script src="app.js"></script>
@@ -35,6 +36,7 @@ function renderTkb(){const b=$('tkb');b.textContent='';
  im.src=S.timetable_url;}
 function tick(){const n=vnNow();$('clock').textContent=n.time;if(n.date!==shown){shown=n.date;$('date').textContent=fmtDate(n.date);renderDuty();}}
 setInterval(tick,1000);tick();
+if(sb)sb.from('fund_entries').select('kind,amount').limit(1000).then(r=>{if(r.error)return;const t=r.data.reduce((a,e)=>a+(e.kind==='thu'?e.amount:-e.amount),0);$('fundv').textContent=t.toLocaleString('vi-VN')+'đ ›'});
 loadSettings().then(d=>{S=d;$('cn').textContent=d.class_name||'Lớp học';document.title=d.class_name||'Thông tin lớp học';
  $('demo').hidden=!JSON.stringify(d).includes('minh họa');renderDuty();renderRoom();renderTkb();})
 .catch(e=>{$('err').hidden=false;$('err').textContent='Không tải được dữ liệu: '+(e.message||'lỗi mạng')+'. Kiểm tra kết nối mạng rồi tải lại trang.';

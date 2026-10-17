@@ -2,7 +2,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Tiền quỹ lớp</title>
 <link rel="stylesheet" href="style.css?v=2"><link rel="stylesheet" href="holo.css?v=2">
 <style>.sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}.sum div{background:var(--bg);border-radius:12px;padding:10px 4px;font-size:.85rem}.sum b{display:block;font-size:.95rem;white-space:nowrap}.sum div{cursor:pointer;border:2px solid transparent}.sum div.on{border-color:var(--b);background:#fff;box-shadow:0 0 0 3px rgba(30,98,208,.18)}
-.row{border-bottom:1px solid #e3ebf8;padding:10px 0}.row:last-child{border:0}.l{display:flex;justify-content:space-between;gap:8px}.thu{color:var(--ok)}.chi{color:var(--er)}.pf{margin-top:6px;width:90px;height:90px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block}</style></head><body>
+.row{border-bottom:1px solid #e3ebf8;padding:10px 0}.row:last-child{border:0}.l{display:flex;justify-content:space-between;gap:8px}.thu{color:var(--ok)}.chi{color:var(--er)}.pf{margin-top:6px;width:90px;height:90px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block}.dtb{position:relative;display:inline-block;overflow:hidden;font-weight:700;font-size:.85rem;padding:4px 14px;border-radius:999px;margin-bottom:5px;border:1px solid rgba(255,255,255,.85);-webkit-backdrop-filter:blur(10px) saturate(180%);backdrop-filter:blur(10px) saturate(180%);box-shadow:inset 0 1.5px 1px rgba(255,255,255,.95),inset 0 -3px 6px rgba(255,255,255,.35),0 4px 12px var(--gl)}
+.dtb::after{content:"";position:absolute;left:8%;right:8%;top:1px;height:46%;border-radius:999px;background:linear-gradient(rgba(255,255,255,.75),rgba(255,255,255,0));pointer-events:none}
+.dthu{--gl:rgba(15,150,90,.35);color:#065a35;background:linear-gradient(160deg,rgba(80,220,150,.55),rgba(30,170,110,.25))}
+.dchi{--gl:rgba(220,50,60,.35);color:#8a1219;background:linear-gradient(160deg,rgba(255,110,120,.55),rgba(220,60,70,.25))}
+.row{background:radial-gradient(circle at 12% 18%,rgba(125,170,255,.16),transparent 55%)}
+.dsc{font-weight:600}</style></head><body>
 <header class="hero"><div style="text-align:left"><a href="index.html" style="color:#fff">← Trang chủ</a></div><h1>💰 Tiền quỹ hiện tại</h1><div id="bal" class="clock">…</div></header>
 <main><section class="card"><div class="sum"><div data-f="thu" role="button">Tổng thu<b id="t" class="thu">…</b></div><div data-f="chi" role="button">Tổng chi<b id="c" class="chi">…</b></div><div data-f="all" role="button" class="on">Còn lại<b id="r">…</b></div></div><p class="muted" style="margin:8px 0 0;text-align:center">Chạm vào ô Tổng thu hoặc Tổng chi để lọc. Chạm Còn lại để xem tất cả.</p></section>
 <section class="card"><h2 id="ttl">Chi tiết thu chi</h2><div id="list" class="muted">Đang tải…</div></section></main>
@@ -18,7 +23,7 @@ function render(d){DATA=d;let t=0,c=0;d.forEach(e=>{if(e.kind==='thu')t+=e.amoun
 function draw(){const d=DATA.filter(e=>F==='all'||e.kind===F);$('ttl').textContent=F==='thu'?'Các khoản thu':F==='chi'?'Các khoản chi':'Chi tiết thu chi';
  const L=$('list');L.textContent='';L.className='';if(!d.length){L.className='muted';L.textContent=F==='thu'?'Chưa có khoản thu nào.':F==='chi'?'Chưa có khoản chi nào.':'Chưa có khoản thu chi nào.';return}
  d.forEach(e=>{const r=document.createElement('div');r.className='row';const a=document.createElement('div');a.className='l';
-  const x=document.createElement('span');x.textContent=dmy(e.entry_date)+' · '+e.description;
+  const x=document.createElement('div');x.style.cssText='flex:1;min-width:0';const dd=document.createElement('span');dd.className='dtb '+(e.kind==='thu'?'dthu':'dchi');dd.textContent='📅 '+dmy(e.entry_date);const ds=document.createElement('div');ds.className='dsc';ds.textContent=e.description;x.append(dd,ds);
   const y=document.createElement('b');y.className=e.kind;y.textContent=(e.kind==='thu'?'+':'−')+money(e.amount);a.append(x,y);r.append(a);
   if(e.proof_url){const im=new Image();im.src=e.proof_url;im.alt='Minh chứng';im.className='pf';im.loading='lazy';im.onclick=()=>lightbox(e.proof_url);r.append(im)}
   L.append(r)})}
